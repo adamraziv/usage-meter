@@ -1,0 +1,11 @@
+{
+  "name": "usage-meter",
+  "owner": { "name": "adamraziv" },
+  "plugins": [
+    {
+      "name": "usage-meter",
+      "source": "./",
+      "description": "Rate-limit bars with live reset countdowns, run-out prediction, session cost and today's cost above the prompt"
+    }
+  ]
+}
