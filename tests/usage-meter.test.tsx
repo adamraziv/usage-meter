@@ -54,7 +54,7 @@ test('limits as bars with live reset countdowns, session and today cost', { time
   // Without the watcher, the mod's own binary is polled for all three parts.
   expect(helperCalls.every(c => /\/bin\/usage-meter-helper$/.test(c[0] ?? ''))).toBe(true)
   expect(helperCalls.some(c => c.includes('--today'))).toBe(true)
-  expect(helperCalls.some(c => c.join(' ').includes('--place /Users/me/code/voltron'))).toBe(true)
+  expect(helperCalls.some(c => c.includes('--place'))).toBe(false)
   expect(helperCalls.some(c => c.includes('--account'))).toBe(true)
 
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -67,12 +67,12 @@ test('limits as bars with live reset countdowns, session and today cost', { time
     expect(await band.find({ type: 'Text', text: /^\$49\.18$/ })).toBeDefined()
     expect(await band.find({ type: 'Text', text: /^94%$/ })).toBeDefined()
     expect(await band.find({ type: 'Text', text: /sessions/ })).toBeUndefined()
-    expect(await band.find({ type: 'Text', text: /^voltron$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^voltron$/ })).toBeUndefined()
     expect(await band.find({ type: 'Text', text: /^Fable $/ })).toBeDefined()
     expect(await band.find({ type: 'Text', text: /^ 40%$/ })).toBeDefined()
     expect(await band.find({ type: 'Text', text: /^3d7h$/ })).toBeDefined()
     expect(await band.find({ type: 'Text', text: /as of/ })).toBeUndefined()
-    expect(await band.find({ type: 'Text', text: /^feat\/usage-band$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^feat\/usage-band$/ })).toBeUndefined()
     expect(await band.find({ type: 'Text', text: /Context/ })).toBeUndefined()
     await band.unmount()
 

@@ -5,7 +5,6 @@ A Claude Code mod that shows a band above the prompt with:
 - **5h / 7d / per-model weekly (e.g. Fable) limits**: bars, % used, and a live countdown to reset
 - **Run-out prediction**: when a limit is on pace to run out before it resets, the time left turns yellow (red when under an hour), e.g. `↻ 2h10m/48m`
 - **Session cost, today's cost and cache-hit %**
-- Current folder and git branch
 
 ## Install
 
@@ -18,7 +17,7 @@ In Claude Code:
 
 ## The helper
 
-Today's spend, cache %, folder/branch and the per-model weekly limits come from a small Rust helper.
+Today's spend, cache % and the per-model weekly limits come from a small Rust helper.
 A prebuilt binary for **Apple Silicon macOS** is in `bin/`. On any other platform, build it (needs Rust):
 
 ```

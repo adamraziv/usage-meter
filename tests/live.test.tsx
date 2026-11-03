@@ -45,7 +45,7 @@ test('the wait loop brings changes in and nothing is polled while it runs', { ti
   const band = await $.ui.mount({ plugin: 'usage-meter', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false } as never })
   expect(await band.find({ type: 'Text', text: /^\$2\.25$/ })).toBeDefined()
   expect(await band.find({ type: 'Text', text: /^91%$/ })).toBeDefined()
-  expect(await band.find({ type: 'Text', text: /^feat\/live$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^feat\/live$/ })).toBeUndefined()
   await band.unmount()
 })
 

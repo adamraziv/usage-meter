@@ -1,1 +1,1 @@
-{"name": "usage-meter", "version": "0.10.0", "description": "Rate-limit bars with live reset countdowns, session cost and today's cost above the prompt", "types": "./types/index.d.ts"}
+{"name": "usage-meter", "version": "0.11.0", "description": "Rate-limit bars with live reset countdowns, session cost and today's cost above the prompt", "types": "./types/index.d.ts"}

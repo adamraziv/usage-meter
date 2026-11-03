@@ -1,13 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionUsage } from 'claude-code'
 
-import type { Limit, ModelLimit, Place, Reply, Sample, Snapshot, Today } from '../types'
+import type { Limit, ModelLimit, Reply, Sample, Snapshot, Today } from '../types'
 import { dropEndedWindows, mergeSamples } from './history'
 import { activity, pace } from './pace'
 
 const snapshot = atom({ plugin: 'usage-meter', key: 'snapshot' } as const, null)
 const today = atom({ plugin: 'usage-meter', key: 'today' } as const, null)
-const place = atom({ plugin: 'usage-meter', key: 'place' } as const, null)
 const modelLimits = atom({ plugin: 'usage-meter', key: 'modelLimits' } as const, [])
 const accountSession = atom({ plugin: 'usage-meter', key: 'accountSession' } as const, null)
 const refreshing = atom({ plugin: 'usage-meter', key: 'isRefreshing' } as const, false)
@@ -30,9 +29,9 @@ function quietly(work: Promise<unknown>): void {
   work.catch(() => undefined)
 }
 
-// ---- the Rust helper: today's spend, folder and branch, cached account limits ----
+// ---- the Rust helper: today's spend, cached account limits ----
 
-// One run answers any of the three; see helper/src/main.rs. Built into bin/.
+// One run answers either; see helper/src/main.rs. Built into bin/.
 let helper = ''
 const SCAN_EVERY_MS = 30_000
 const POLL_EVERY_MS = 5_000 // the fallback's pace when the wait loop is down
@@ -40,7 +39,6 @@ let lastScan = 0
 
 type HelperOut = {
   today?: { usd: number; cacheHit: number | null; byModel?: Record<string, number>; recent?: Reply[]; date?: string } | null
-  place?: { folder: string; branch: string | null } | null
   account?: {
     fetchedAt: number
     session: { percent: number; resetsAt: string | null } | null
@@ -48,7 +46,7 @@ type HelperOut = {
   } | null
 }
 
-async function poll($: EngineInterface, want: { today?: boolean; place?: boolean; account?: boolean }): Promise<void> {
+async function poll($: EngineInterface, want: { today?: boolean; account?: boolean }): Promise<void> {
   const argv = [helper]
   const t = await $.clock.now()
   const wantsToday = want.today === true && t - lastScan >= SCAN_EVERY_MS
@@ -56,7 +54,6 @@ async function poll($: EngineInterface, want: { today?: boolean; place?: boolean
     argv.push('--today')
     lastScan = t
   }
-  if (want.place) argv.push('--place', await $.session.cwd())
   if (want.account) argv.push('--account')
   if (argv.length === 1) return
 
@@ -79,13 +76,6 @@ async function apply($: EngineInterface, out: HelperOut): Promise<void> {
       recent: r.recent ?? [],
       date: r.date ?? null,
     }) satisfies Today)
-  }
-  if (out.place) {
-    const { folder, branch } = out.place
-    const prev = await read($, place)
-    if (prev?.folder !== folder || prev?.branch !== branch) {
-      await update($, place, () => ({ folder, branch }) satisfies Place)
-    }
   }
   if (out.account) await applyAccount($, out.account)
 }
@@ -297,7 +287,7 @@ async function refreshAll($: EngineInterface): Promise<void> {
       refreshAccountUsage($, true),
       (async () => {
         lastScan = 0
-        await poll($, { today: true, place: true, account: true })
+        await poll($, { today: true, account: true })
       })(),
     ])
   } finally {
@@ -316,12 +306,6 @@ function bar(percent: number): { full: string; empty: string } {
   // Any use at all shows at least one cell; a full window fills the bar.
   const filled = percent <= 0 ? 0 : Math.min(BAR_CELLS, Math.max(1, Math.round((percent / 100) * BAR_CELLS)))
   return { full: '━'.repeat(filled), empty: '━'.repeat(BAR_CELLS - filled) }
-}
-
-function shorten(text: string, max: number): string {
-  if (text.length <= max) return text
-  const keep = max - 1
-  return `${text.slice(0, Math.ceil(keep / 2))}…${text.slice(text.length - Math.floor(keep / 2))}`
 }
 
 function countdown(msLeft: number): string {
@@ -433,11 +417,11 @@ async function start($: EngineInterface): Promise<void> {
           lastSync = t
           await syncHistory($)
         }
-        // Without the wait loop, poll: the folder and account every few
+        // Without the wait loop, poll: the account every few
         // seconds, today's spend every SCAN_EVERY_MS (poll spaces that itself).
         if (!watching && t - lastPoll >= POLL_EVERY_MS) {
           lastPoll = t
-          await poll($, { today: true, place: true, account: true })
+          await poll($, { today: true, account: true })
         }
         quietly(refreshAccountUsage($, false))
       })(),
@@ -459,9 +443,9 @@ export const register: Register = on => {
     if (e.changed.includes('rateLimits') || e.changed.includes('cost')) {
       await measure($, e)
     }
-    // A turn may have spent, or switched branch or directory; the watcher
-    // sees that by itself, so this is the fallback only.
-    if (!watching) quietly(poll($, { today: e.changed.includes('cost'), place: true }))
+    // A turn may have spent; the watcher sees that by itself, so this is
+    // the fallback only.
+    if (!watching && e.changed.includes('cost')) quietly(poll($, { today: true }))
     return next(e)
   })
 
@@ -490,7 +474,6 @@ export const register: Register = on => {
     const now = await read($, nowAtom)
     const isBusy = await read($, refreshing)
     const t = await read($, today)
-    const p = await read($, place)
     const models = await read($, modelLimits)
     const acct = await read($, accountSession)
     const hist = await read($, history)
@@ -507,15 +490,6 @@ export const register: Register = on => {
     // One row that wraps whole segments onto the next line, never mid-item.
     const band = (
       <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
-        {p && (
-          <Box key="place" flexShrink={0}>
-            <Text wrap="truncate-end">
-              <Text bold>{shorten(p.folder, 24)}</Text>
-              {p.branch && <Text dimColor> ⎇ </Text>}
-              {p.branch && <Text {...lit('branch', p.branch, 'suggestion')}>{shorten(p.branch, 48)}</Text>}
-            </Text>
-          </Box>
-        )}
         {s.limits.map(raw => {
           const l = fiveHour(raw, s, acct)
           const b = bar(l.percentUsed)

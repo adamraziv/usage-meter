@@ -30,10 +30,9 @@ export type ModelLimit = { name: string; percent: number; resetsAt: string | nul
  */
 export type Sample = { t: number; pct: number; w?: string | null; c?: number | null; d?: string | null }
 
-export type Place = { folder: string; branch: string | null }
 
 declare module 'claude-code' {
   interface PluginState {
-    'usage-meter': { snapshot: Snapshot | null; today: Today | null; place: Place | null; modelLimits: ModelLimit[]; accountSession: ModelLimit | null; isRefreshing: boolean; history: Record<string, Sample[]>; now: number }
+    'usage-meter': { snapshot: Snapshot | null; today: Today | null; modelLimits: ModelLimit[]; accountSession: ModelLimit | null; isRefreshing: boolean; history: Record<string, Sample[]>; now: number }
   }
 }
